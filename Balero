@@ -1,0 +1,51 @@
+#!/usr/bin/python
+
+import time
+from flask import Flask, jsonify
+from multiprocessing import Process, Value
+import serial
+
+ser = serial.Serial('/dev/ttyGS0', 115200)
+
+app = Flask(__name__)
+
+
+tasks = [
+   {
+      'id': 1,
+      'title': u'Buy groceries',
+      'description': u'Milk, Cheese, Pizza, Fruit, Tylenol', 
+      'done': False
+   },
+   {
+      'id': 2,
+      'title': u'Learn Python',
+      'description': u'Need to find a good Python tutorial on the web', 
+      'done': False
+   }
+]
+
+
+@app.route('/api', methods=['GET'])
+def get_tasks():
+   return jsonify({'tasks': tasks})
+
+
+def anim_loop(anim_on):
+   while True:
+      if anim_on.value == True:
+         print("anim running")
+      time.sleep(5/1000.0)
+
+
+def serial_loop():
+	ser.write("hello...")
+	print("tick")
+	time.sleep(1)
+
+if __name__ == "__main__":
+   anim_on = Value('b', True)
+   p = Process(target=anim_loop, args=(anim_on,))
+   p.start()  
+   app.run(debug=True, use_reloader=False, host='0.0.0.0')
+   p.join()
