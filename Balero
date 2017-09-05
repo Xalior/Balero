@@ -1,14 +1,17 @@
 #!/usr/bin/python
 
 import time
+import requests
 from flask import Flask, jsonify
-from multiprocessing import Process, Value
+from multiprocessing import Process, Value, Array
 import serial
 
-ser = serial.Serial('/dev/ttyGS0', 115200)
 
 app = Flask(__name__)
 
+anim_on = Value('b', True)
+serial_on = Value('b', True)
+command_index = Value('i', 0)
 
 tasks = [
    {
@@ -25,27 +28,45 @@ tasks = [
    }
 ]
 
+hue = 0
+
+@app.route('/api/AT/1', methods=['GET'])
+def get_hue():
+   global hue
+   print(hue)
+   hue = hue + 1
+   return jsonify({'hue': hue})
+
 
 @app.route('/api', methods=['GET'])
 def get_tasks():
    return jsonify({'tasks': tasks})
 
-
-def anim_loop(anim_on):
+def anim_loop(anim_on, ):
+   global hue
    while True:
       if anim_on.value == True:
-         print("anim running")
-      time.sleep(5/1000.0)
+         print("anim running, hue is "+ str(hue))
+      time.sleep(100/1000.0)
 
+ser = serial.Serial('/dev/ttyGS0', 115200)
 
-def serial_loop():
-	ser.write("hello...")
-	print("tick")
-	time.sleep(1)
+def serial_listener(serial_on):
+   global hue
+   print("serial ready")
+   ser.write("+READY")
+   while True:
+      command = ser.read()
+      ser.write(command)
+      print(command)   
+      r = requests.get('http://127.0.0.1:5000/api/AT/'+command)
+      print(r.status_code)
 
 if __name__ == "__main__":
-   anim_on = Value('b', True)
-   p = Process(target=anim_loop, args=(anim_on,))
-   p.start()  
+   anim_p = Process(target=anim_loop, args=(anim_on,))
+   anim_p.start()  
+   serial_p = Process(target=serial_listener, args=(serial_on,))
+   serial_p.start()  
    app.run(debug=True, use_reloader=False, host='0.0.0.0')
-   p.join()
+   anim_p.join()
+   serial_p.join()
