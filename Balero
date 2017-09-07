@@ -5,7 +5,6 @@ from flask import Flask, jsonify
 from multiprocessing import Process, Value
 import serial
 
-ser = serial.Serial('/dev/ttyGS0', 115200)
 
 app = Flask(__name__)
 
@@ -36,12 +35,20 @@ def anim_loop(anim_on):
       if anim_on.value == True:
          print("anim running")
       time.sleep(5/1000.0)
-
+#def rainbowCycle(strip, wait_ms=20, iterations=5):
+#        """Draw rainbow that uniformly distributes itself across all pixels."""
+#        for j in range(256*iterations):
+#                for i in range(strip.numPixels()):
+#                        strip.setPixelColor(i, wheel((int(i * 256 / strip.numPixels()) + j) & 255))
+#                strip.show()
+#                time.sleep(wait_ms/1000.0)
 
 def serial_loop():
-	ser.write("hello...")
-	print("tick")
-	time.sleep(1)
+   ser = serial.Serial('/dev/ttyGS0', 115200)
+   while True:
+      ser.write("hello...")
+      print("tick")
+      time.sleep(1)
 
 if __name__ == "__main__":
    anim_on = Value('b', True)
