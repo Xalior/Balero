@@ -1,7 +1,7 @@
 from neopixel import *
 
 # LED strip configuration:
-FRONT_LED_COUNT = 12  # Number of LED pixels.
+FRONT_LED_COUNT = 12 # Number of LED pixels.
 FRONT_LED_PIN = 18  # GPIO pin connected to the pixels (18 uses PWM!).
 # LED_PIN        = 10      # GPIO pin connected to the pixels (10 uses SPI /dev/spidev0.0).0
 FRONT_LED_FREQ_HZ = 800000  # LED signal frequency in hertz (usually 800khz)

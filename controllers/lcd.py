@@ -19,6 +19,8 @@ x0, y0 = 63, 31
 width = ((x0 + 1) * 2) - 1
 height = ((y0 + 1) * 2) - 1
 
+second = int(time.strftime("%S"))  # Used to keep track if we need to redraw the clock...
+
 
 def get_face_xy(angle, radius):
     """
@@ -30,36 +32,48 @@ def get_face_xy(angle, radius):
     return x, y
 
 
-def draw_face():
+def keypad():
+    return
+
+
+def draw_button(x, y, button, label = ""):
+    glcd.draw_string(button, arcadepix, x+2, y+1)
+    glcd.draw_string(label, fixed, x+14, y+3)
+    glcd.draw_rectangle(x, y, 12, 12)
+
+def draw():
     # Outline
-    #glcd.draw_rectangle(1, height - 8, width, height - 8)
-    glcd.draw_circle(x0, y0, 31)
-    # Ticks
-    for angle in range(30, 331, 30):
-        glcd.draw_line(x0, y0, *get_face_xy(angle, 29))
-    # Clear center of circle
-    glcd.fill_circle(x0, y0, 25, color=0)
-    # Numbers
-    glcd.draw_string("12", neato, x0 - 5, y0 - 29, spacing=0)
-    glcd.draw_letter("3", neato, x0 + 25, y0 - 3)
-    glcd.draw_letter("6", neato, x0 - 2, y0 + 23)
-    glcd.draw_letter("9", neato, x0 - 29, y0 - 3)
+    glcd.draw_line(0, height - 8, width, height - 8)
+    # Time
+    glcd.draw_string(time.strftime("%H:%M:%S").upper(), wendy, 0, height - 7)
     # Date
-    glcd.draw_string(time.strftime("%b").upper(), wendy, 0, 0)
-    glcd.draw_string(time.strftime("@Xalior"), broadway, 0, 31)
+    glcd.draw_string(time.strftime("%D").upper(), wendy, width - 38, height - 7)
+    # Title
+    glcd.draw_string("MAIN", wendy, 0, 0)
+    glcd.draw_line(0, 8, width, 8)
+    # Option
+    draw_button(0, 10, "A", "LCD")
+    draw_button(64, 10, "B", "LEDs")
+    draw_button(0, 24, "C", "Keypad")
+    draw_button(64, 24, "D", "Settings")
+    #
 
-second = int(time.strftime("%S"))
-
+    # Default Options
+    draw_button(0, 42, "*", "back")
+    draw_button(64, 42, "#", "help")
+    # for i in range(0, 9):
+    #     draw_button(i*14, 42, str(i))
 
 def main():
+    keypad()
     global second
     if second != int(time.strftime("%S")):
         glcd.clear_back_buffer()
-        draw_face()
-        second = int(time.strftime("%S"))
-        minute = int(time.strftime("%M"))
-        hour = int(time.strftime("%H"))
-        glcd.draw_line(x0, y0, *get_face_xy(second * 6 + 270, 28))
-        glcd.draw_line(x0, y0, *get_face_xy(minute * 6 + 270, 24))
-        glcd.draw_line(x0, y0, *get_face_xy(hour * 30 - 90, 15))
+        draw()
+        # second = int(time.strftime("%S"))
+        # minute = int(time.strftime("%M"))
+        # hour = int(time.strftime("%H"))
+        # glcd.draw_line(x0, y0, *get_face_xy(second * 6 + 270, 28))
+        # glcd.draw_line(x0, y0, *get_face_xy(minute * 6 + 270, 24))
+        # glcd.draw_line(x0, y0, *get_face_xy(hour * 30 - 90, 15))
         glcd.flip()
