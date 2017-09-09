@@ -1,32 +1,17 @@
 #!/usr/bin/python
-
-import time
-import requests
+import requests, time
 from flask import Flask, jsonify
 from multiprocessing import Process, Value, Array
 import serial
+from controllers import led
+from controllers import lcd
 
-from neopixel import *
-
-# LED strip configuration:
-FRONT_LED_COUNT = 12  # Number of LED pixels.
-FRONT_LED_PIN = 18  # GPIO pin connected to the pixels (18 uses PWM!).
-# LED_PIN        = 10      # GPIO pin connected to the pixels (10 uses SPI /dev/spidev0.0).0
-FRONT_LED_FREQ_HZ = 800000  # LED signal frequency in hertz (usually 800khz)
-FRONT_LED_DMA = 5  # DMA channel to use for generating signal (try 5)
-FRONT_LED_BRIGHTNESS = 255  # Set to 0 for darkest and 255 for brightest
-FRONT_LED_INVERT = False  # True to invert the signal (when using NPN transistor level shift)
-FRONT_LED_CHANNEL = 0  # set to '1' for GPIOs 13, 19, 41, 45 or 53
-FRONT_LED_STRIP = ws.WS2811_STRIP_GRB  # Strip type and colour ordering
-strip = Adafruit_NeoPixel(FRONT_LED_COUNT, FRONT_LED_PIN, FRONT_LED_FREQ_HZ, FRONT_LED_DMA, FRONT_LED_INVERT,
-                          FRONT_LED_BRIGHTNESS, FRONT_LED_CHANNEL, FRONT_LED_STRIP)
-strip.begin()
-
+print led
 app = Flask(__name__)
 
-anim_on = Value('b', True)
-serial_on = Value('b', False)
-command_index = Value('i', 0)
+front_anim_on = Value('b', True)
+front_anim_command = Value('i', 0)
+serial_on = False
 
 tasks = [
     {
@@ -43,19 +28,6 @@ tasks = [
     }
 ]
 
-
-def wheel(pos):
-    """Generate rainbow colors across 0-255 positions."""
-    if pos < 85:
-        return Color(pos * 3, 255 - pos * 3, 0)
-    elif pos < 170:
-        pos -= 85
-        return Color(255 - pos * 3, 0, pos * 3)
-    else:
-        pos -= 170
-        return Color(0, pos * 3, 255 - pos * 3)
-
-
 hue = 0
 
 
@@ -70,24 +42,24 @@ def get_tasks():
     return jsonify({'tasks': tasks})
 
 
-def anim_loop(anim_on, ):
-    print "ANIM START"
-    j = 0
+def render_thread(front_anim_on, front_anim_command ):
+    print "RENDER STARTING"
     while True:
-        if anim_on.value == 1:
-            for i in range(strip.numPixels()):
-                strip.setPixelColor(i, wheel((int(i * 256 / strip.numPixels()) + j) & 255))
-            strip.show()
-            j = j + 1
-            if j > 255:
-                j = 0
-            time.sleep(5/1000.0)
+        renderStart = time.time()
+        lcd.main()
+        led.main(front_anim_on, front_anim_command)
+        renderTime = time.time() - renderStart
+        if renderTime < 0.016:
+            print "Sleepiing"
+            time.sleep(0.016 - renderTime)
+        else:
+            print "not sleeping"
 
 
-def serial_listener(serial_on, ):
+def serial_thread(serial_on, ):
     print "SERIAL STARTING"
-    if serial_on.value == True:
-        print "SERIAL STARTING"
+    if serial_on.value == 1:
+        print "SERIAL START"
         ser = serial.Serial('/dev/ttyGS0', 115200)
         print("serial ready")
         ser.write("+READY")
@@ -100,10 +72,12 @@ def serial_listener(serial_on, ):
 
 
 if __name__ == "__main__":
-    anim_p = Process(target=anim_loop, args=(anim_on,))
-    anim_p.start()
-    serial_p = Process(target=serial_listener, args=(serial_on,))
-    serial_p.start()
+    if serial_on:
+        serial_p = Process(target=serial_thread, args=(serial_on,))
+        serial_p.start()
+    render_p = Process(target=render_thread, args=(front_anim_on, front_anim_command))
+    render_p.start()
+    if serial_on:
+        serial_p.join()
+    render_p.join()
     app.run(debug=True, use_reloader=False, host='0.0.0.0')
-    anim_p.join()
-    serial_p.join()
